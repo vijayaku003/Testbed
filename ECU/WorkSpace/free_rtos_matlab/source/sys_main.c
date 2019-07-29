@@ -50,18 +50,6 @@ int *intindexreg = (int *) 0xFFFFFE00;
 #define UART_STEER sciREG //Tx steering data
 #define UART_STACK_SIZE	  ( ( unsigned portSHORT ) 256 )
 
-//#define f_HCLK (float) 180.0 // f in [MHz]; HCLK (depends on device setup)
-
-
-
-//uint8_t statsBuffer[40*5]; // Enough space for 5 tasks - this needs to be global, since task stack is too small
-
-/*---------------Mode/Scenario/ResourceShortage Change Flags----------------------*/
-
-// Resource Shortage Type Flags
-
-
-
 
 uint8 rx_str_data[5];
 uint8 rx_data[DATA_LEN];
@@ -80,42 +68,22 @@ SemaphoreHandle_t vehToVehSem;
 
 uint32 mailBox;
 
-/* Degradation cruise control task PID ; ONOFF ; Lateral Control */
-
-//int PID = 1;
-//int ONOFF = 0;
-//int ISA = 1;
-
-int ccdegradePeriod = 0;
 int degradeSteer =0;
-
 static int V2Venabled = 1;
-static int degradeRadarPeriod = 1;
-static int degradeV2VPeriod = 1;
 static float curveVelocity = 18.0;
 
 
 /* Curve Coordinates for Oval track E-Track 5 */
 
 float curve_1_x_start = 314; // 720 < follow_pos[0] < 710 entering curve1
-//float curve_2_x_start = 388; // 729 < follow_pos[0] < 720  entering curve2
 float curve_2_x_start = 387.5; // 655 < follow_pos[0] < 670 entering curve3
 float curve_3_x_start = 114; //  316 < follow_pos[0] < 330  entering curve4
 float curve_4_x_start = 40.3;
 
-//float curve_5_x_start = 40; //  188 < follow_pos[0] < 200 entering curve5
-//float curve_6_x_start = 40; // 7 < follow_pos[0] < 20 entering curve6
-//float curve_7_x_start = 114; //  90 < follow_pos[0] < 80  entering curve7
-
 float curve_1_y_start = 14; // 720 < follow_pos[0] < 710 entering curve1
-//float curve_2_y_start = 181; // 729 < follow_pos[0] < 720  entering curve2
 float curve_2_y_start = 316.8; // 655 < follow_pos[0] < 670 entering curve
 float curve_3_y_start = 484; //  316 < follow_pos[0] < 330  entering curve4
 float curve_4_y_start = 181;
-
-//float curve_5_y_start = 316; //  188 < follow_pos[0] < 200 entering curve5
-//float curve_6_y_start = 181; // 7 < follow_pos[0] < 20 entering curve6
-//float curve_7_y_start = 13; //  90 < follow_pos[0] < 80  entering curve7
 
 int curve_xpos[] = {314,388,114,40};
 int curve_ypos[] = {14,316,316,13};
@@ -143,10 +111,6 @@ int curvepassedxPos = 0;
 int curvepassedyPos = 0;
 
 // Track : Oval track A-speedway
-//static int curve1Start = 255;
-//static int curve2Start = 545;
-//static int curve3Start = 1200;
-//static int curve4Start = 1490;
 
 static int curve1Start = 225;
 static int curve2Start = 515;
@@ -184,9 +148,6 @@ int curveDistanceTrigger[] = {90,459,900,1280};
 
 int distanceCurveMap[] = {0,0,0,0 }; // Map each curve  to 'distance' variable value - value should be got from scope after running simulation
 
-
-
-void delay_ms(unsigned int  delay);
 int calculateWheelSlip(int *wheelSpin);
 int calculateSteerSensitivity(int pubSpeed);
 
@@ -206,8 +167,6 @@ float numericalDerivativeKP(float kp);
 float numericalDerivativeKD(float kd);
 float steering (float angular_vel, float headingError, float lateralError);
 void accelerationControl(float accelDemand, float follower_accelX, int sensor);
-void accelerationControl_radar(float accelDemand, float follower_accelX);
-void accelerationControl_isa(float accelDemand, float follower_accelX);
 void accelerationControlVeh(float accelDemand, float follower_accelX);
 double int_simpson(double from, double to, double n, double m, double c);
 float min(float a, float b);
@@ -220,20 +179,13 @@ float prevTime, currentTime;
 float timeStep;
 static float lead_pos[3], lead_pos_delayed[3];
 static float fol_pos[]={179,10,0};
-static float folo_pos_previous[] = {179,10,0};
-//static float lead_pos_x, lead_pos_y, lead_pos_z, fol_pos_x, fol_pos_y, fol_pos_z;
 static float fol_vel, lead_vel, lead_vel_delayed;
 static float fol_ang_vel_z, fol_head_error, fol_lat_error, fol_acc_x, fol_yaw, dummy;
 static uint32 ans,ans2;
 //outputs
 static int vehicleAhead;
-static int steerCount;
-static int radarCount;
-static int v2vCount;
 
-static int canOverrun = 0;
-static int canOverrunCount=0;
-
+// Overrun Flags
 static int ccOverrun = 0;
 static int ccOverrunCount = 0;
 
@@ -249,13 +201,10 @@ static int steerOverrunCount = 0;
 static int v2vOverrun = 0;
 static int v2vOverrunCount = 0;
 
-
-static float distApartVV, accelDemand, accelDemand_ISA;
 static int distApartRadar;
 static float throttle, brake, steer;
 
-static float throttle_radar, throttle_v2v, throttle_isa;
-static float gear=0;
+static float accelDemand, accelDemand_ISA;
 
 //Ultrasonic Variables
 static int overrunTrigger;
@@ -263,16 +212,6 @@ static int overrunTrigger;
 
 static float curvatureThreshold=0.02;
 static float downcurvatureThreshold=-0.02;
-
-static int xPosIndex=0;
-static int yPosIndex=0;
-
-static unsigned long  WCET[] = {300000, 300000, 300000, 300000, 300000 }; // CAN, CC, V2V, Steer, CA
-
-static int state = 0;
-
-static uint32_t processorUtilization=0;
-
 
 void vApplicationIdleHook()
 {
@@ -312,85 +251,24 @@ inline void sciDisplayText(sciBASE_t *sci, uint8 *text,uint32 length)
 	};
 }
 
-unsigned long getWCET(long index){
-	return WCET[index];
-}
 
-void runTimeUtilization(float utilization){
-	processorUtilization =  utilization;
-}
-
-
-// Pass priority of a task and budget consumed by a task as input parameters
-
-void stateServiceLevelManager(unsigned long priority, uint32_t runTime){
-	if(priority > 2){
-		if(runTime > getWCET(priority)){
-			// Change to safe state;
-			state = priority;
-		}
-	}
-}
-// Vehicle to Vehicle
+// Vehicle to Vehicle:  V2V Task
 
 void vehToVehTask(void *pvParameters)
 {
-	//For periodicity
-	TickType_t xLastWakeTime;
-	xLastWakeTime = xTaskGetTickCount();
-
-	/*while(1)
-	{
-
-		if(degradeV2VPeriod == 0){
-		vTaskDelayUntil(&xLastWakeTime, 2000); //3ms
-		}
-
-			else{
-				vTaskDelayUntil(&xLastWakeTime, 10000); //3ms
-
-			}*/
 	if(V2Venabled == 1){
 		if(xSemaphoreTake(vehToVehSem, 0) == pdTRUE)
 		{
-			//distApartVV = calculateEuclidianDistance(fol_pos, lead_pos_delayed);
 			vehicleAhead = checkFieldOfViewV2V(distApartRadar);
 		}
 	}
-
 	vTaskDelete(vehToVehTaskTcb);
-
-	//}
 }
 
-// Blink LED Task :
-
-void blinkLEDTask(void *pvParameters){
-
-	//For periodicity
-	TickType_t xLastWakeTime;
-	xLastWakeTime = xTaskGetTickCount();
-	while(1)
-	{
-		vTaskDelayUntil(&xLastWakeTime, 10); //3ms
-
-		gioSetPort(hetPORT1, gioGetPort(hetPORT1) ^ 0x80000021);
-
-
-	}
-}
 
 //Collision Avoidance Task :
 
 void CATask(void *pvParameters){
-	//For periodicity
-	TickType_t xLastWakeTime;
-	xLastWakeTime = xTaskGetTickCount();
-	int i=0;
-	/*while(1)
-	{
-		vTaskDelayUntil(&xLastWakeTime, 2000); //3ms
-		// CANStart=xTaskGetTickCount ();*/
 
 	// Apply emergency brakes
 	if (distApartRadar<10 )
@@ -401,7 +279,6 @@ void CATask(void *pvParameters){
 			send_float(throttle);
 			send_float(steer);
 			send_float(brake);
-			//send_float(processorUtilization);
 		}
 	}
 
@@ -414,17 +291,15 @@ void CATask(void *pvParameters){
 		}
 	}
 
-	if(caOverrun == 1&& caOverrunCount<2){
+	// Dummy loop to simulate the budget overrun of CA task
+	if(caOverrun == 1){
 		int ca=0;
 		caOverrunCount++;
 		for(ca =0;ca<20000;ca++){
 
 		}
 	}
-
 	vTaskDelete(CATcb);
-	//	}
-
 }
 
 // Steer Control :
@@ -434,129 +309,38 @@ void steerTask(void *pvParameters)
 	//For periodicity
 	TickType_t xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
-	//while(1)
-	//{
-
-	//		vTaskDelayUntil(&xLastWakeTime, 2000); //5ms
-
-	//if(dummy > 0.005 && steerCount < 1000){
-	//		vTaskDelayUntil(&xLastWakeTime, 6000); //5ms
-	//		steerCount++;
-
-
-	//else{
-
-	//vTaskDelayUntil(&xLastWakeTime, 2000); //5ms
-
-	//	if(fol_vel < 19){
-	//		V2Venabled = 0;
-	//		ISA = 0;
-	//	}
-
-	/*if(fol_vel > 20){
-	degradeV2VPeriod = 1;
-	}*/
-
-	//	if(fol_vel < 19 && V2Venabled == 0 ){
-	//		V2Venabled = 1;
-	//		PID = 1;
-	//		ONOFF = 0;
-	//		ISA = 0;
-	//		degradeV2VTemp = 0;
-	//ONOFF = 1;
-	//	}
-
-	/*if(foltravelledDistance > 1150.0 && foltravelledDistance< 1250){
-
-	V2Venabled = 0;
-	degradeV2VTemp = 1;
-	v2vCount++;
-
-}
-
-if(v2vCount > 180){
-	V2Venabled = 1;
-	PID = 0;
-	ONOFF = 1;
-}
-	 */
-
-	//if(v2vCount > 200 && fol_vel <18.5 ){
-	//	V2Venabled = 1;
-	//	degradeV2VTemp = 0;
-	//}
-
-	//	if(dummy > 0.005 && v2vCount < 1000){
-	//		degradeV2V=1;
-	//	radarEnable = 0;
-	//radarCount++;
-	//		v2vCount++;
-	//		if(v2vCount > 1000){
-	//			PID = 0;
-	//		ONOFF = 1;
-	//	}
-	//	}
-	//	else{
-	//radarEnable = 1;
-	//		degradeV2V=0;
-
-	//	}
-
-
 
 	steer = steering(fol_ang_vel_z, fol_head_error, fol_lat_error);
 
-	if(steerOverrun == 1&& steerOverrunCount<2){
+	// Dummy loop to simulate the budget overrun of Steer task
+
+	if(steerOverrun == 1){
 		int steer=0;
 		for(steer=0;steer<8000;steer++){
 		}
 	}
 	vTaskDelete(steerTaskTcb);
-	//}
-
 }
 
 
 void radarTask(void *pvParameters)
 {
-	//For periodicity
-	TickType_t xLastWakeTime;
-	xLastWakeTime = xTaskGetTickCount();
-
-	/*while(1)
-	{
-		if(degradeRadarPeriod == 1){
-		vTaskDelayUntil(&xLastWakeTime, 2000); //3ms
-		}
-		else{
-			vTaskDelayUntil(&xLastWakeTime, 10000); //3ms
-		}
-	 */
 	if(xSemaphoreTake(radarSem, 0) == pdTRUE)
 	{
-
-		//	if(radarEnable == 1){
 		//Check for radar
 		distApartRadar = calculateEuclidianDistance(fol_pos, lead_pos);
 		if(V2Venabled != 1){
 			vehicleAhead = checkFieldOfViewRadar(fol_pos, lead_pos, distApartRadar);
 		}
-		//	}
 
 		if(xSemaphoreGive(vehToVehSem) == pdTRUE)
 		{
 			//Go for v-v task
 		}
-
-		//	if(fol_vel > 24){
-		//		ISA = 0;
-		//		V2Venabled = 0; // Degrade V2V till velocity is reduced from 28 to 20 m/s before disabling ISA
-		//degradeV2VTemp = 1;
-		//		v2vCount++;
-		//	}
 	}
+    // Dummy loop to simulate the budget overrun of Radar task
 
-	if(radarOverrun == 1 && radarOverrunCount<2){
+	if(radarOverrun == 1){
 		int radar =0;
 		for(radar =0;radar<8000;radar++){
 
@@ -574,34 +358,14 @@ void cruiseControlTask(void *pvParameters)
 	//For periodicity
 	TickType_t xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
-	/*while(1)
-	{
-		if(foltravelledDistance>1000.0 && foltravelledDistance<1200.0) {
-			//degradePeriod = 1;
-		}
-		if(ccdegradePeriod == 0){
-			vTaskDelayUntil(&xLastWakeTime, 2000); //with 100 Khz frequency, 1 ticks of ostickctr =  0.01 ms; 1000 ticks = 10 ms
-		}
-		else{
-			vTaskDelayUntil(&xLastWakeTime, 10000); //with 100 Khz frequency, 1 ticks of ostickctr =  0.01 ms; 1000 ticks = 10 ms
-		}*/
+
 
 	if(xSemaphoreTake(cruiseControlSem, 0) == pdTRUE)
 	{
 
 		/************************ Implementation of acceleration based on Radar ************************/
 
-		//	distApartRadar = calculateEuclidianDistance(fol_pos, lead_pos);
-		//	vehicleAhead = checkFieldOfView(fol_pos, lead_pos, distApartRadar);
 
-		//				if(vehicleAhead ==1){
-
-		// commented for ON-OFF
-
-		//if(foltravelledDistance > 1600.0 && foltravelledDistance < 1650.0){
-
-		//	V2Venabled = 0;
-		//}
 		gioSetPort(hetPORT1, gioGetPort(hetPORT1) ^ 0x80000021);
 
 		if(PID == 0){
@@ -614,29 +378,8 @@ void cruiseControlTask(void *pvParameters)
 				accelDemand = -((fol_vel - 28.0));
 				accelerationControl(accelDemand, fol_acc_x,1);
 			}
-			/*if (distApartRadar<15){
-					brake = 0.5;
-				}
-				else
-				{
-					throttle = 1.0;
-					brake = 0;
-				}*/
-
 		}
 
-		/*			if (distApartRadar<25)
-												brake = 0.5;
-											else
-												{
-													throttle = 0.5;
-													brake = 0;
-												}
-										}
-
-		 */
-
-		//		else if(PID == 1 && maintainCurveSpeed==0){
 		else if(PID == 1){
 
 			if(vehicleAhead == 1){
@@ -644,30 +387,10 @@ void cruiseControlTask(void *pvParameters)
 				accelerationControl(accelDemand, fol_acc_x,1);
 			}
 
-
-			/*else if(vehicleAhead == 0 && V2Venabled == 1){
-				//	accelDemand = accelerationDemand2((10-distApartVV), fol_vel, lead_vel, 0.8);
-					accelDemand = accelerationDemand2((10-distApartRadar), fol_vel, lead_vel, 0.8);
-					accelerationControl(accelDemand, fol_acc_x,1);
-					//accelerationControlVeh(accelDemand, fol_acc_x);
-				}
-			 */
-			//		else if (degradeV2VTemp == 1){
-			//throttle = 2.0/(1.0+exp(fol_vel-20.0));
-			//brake = 0;
-			//			accelDemand = accelerationDemand2((10-distApartVV), fol_vel, 19.0, 0.8);
-			//			accelerationControl(accelDemand, fol_acc_x,1);
-			//		}
-
-
 			else { // Constant velocity
-				//throttle = 2.0/(1.0+exp(fol_vel-25.0));
-				//brake = 0;
+
 				accelDemand = -((fol_vel - 28.0));
 				accelerationControl(accelDemand, fol_acc_x,1);
-				//		}
-
-				//accelerationControl_radar(accelDemand, fol_acc_x);
 
 			}
 		}
@@ -685,9 +408,7 @@ void cruiseControlTask(void *pvParameters)
 
 
 			// Curve 1 :
-			// integral Distance value at curve  1 start : 400 ; curve 1 end : 587.5;
 
-			// if(foltravelledDistance > 86 && foltravelledDistance < 310 ){
 			if(foltravelledDistance > curve1TrigDist && foltravelledDistance < curve1End ){
 				//if(integralDistance > 400 ){
 				curveCurrentIndex = 1;
@@ -695,11 +416,8 @@ void cruiseControlTask(void *pvParameters)
 				curveAheadIndex = 2;
 			}
 
-
 			// Curve 2 :
-			// integral Distance value at curve  2 start : 709 ; curve 2 end : 897;
 
-			//	else if(foltravelledDistance > 410 && foltravelledDistance < 690 ){
 			else if(foltravelledDistance > curve2TrigDist && foltravelledDistance < curve2End ){
 				curveCurrentIndex = 2;
 				maintainCurveSpeed = 1;
@@ -707,9 +425,7 @@ void cruiseControlTask(void *pvParameters)
 			}
 
 			// Curve 3 :
-			// integral Distance value at curve  3 start : 1059 ; curve 3 end : 1247;
 
-			// else if(foltravelledDistance > 850 && foltravelledDistance < 1150 ){
 			else if(foltravelledDistance > curve3TrigDist && foltravelledDistance < curve3End ){
 				curveCurrentIndex = 3;
 				maintainCurveSpeed = 1;
@@ -717,10 +433,6 @@ void cruiseControlTask(void *pvParameters)
 			}
 
 			// Curve 4 :
-			// integral Distance value at curve  4 start : 1369  ; curve 4 end : 1557 ;
-
-
-			//else if(foltravelledDistance > 1210 && foltravelledDistance < 1500 ){
 
 			else if(foltravelledDistance > curve4TrigDist && foltravelledDistance < curve4End ){
 				curveCurrentIndex = 4;
@@ -735,82 +447,37 @@ void cruiseControlTask(void *pvParameters)
 			if(maintainCurveSpeed == 1){
 
 				accelDemand_ISA = -((fol_vel - curveVelocity)); // Ideally 18
-				//if(accelDemand_ISA < accelDemand){
 				if(accelDemand_ISA < accelDemand){
 					accelerationControl(accelDemand_ISA, fol_acc_x,2);
 				}
-
-				//}
 			}
-
-			//	if(integralDistance > 3269){
-			//		integralDistance =0;
-			//	}
-			//}
 
 			else if(vehicleAhead == 0){
 				accelDemand = -((fol_vel - 28.0));
 				accelerationControl(accelDemand, fol_acc_x,1);
 			}
-
-
 		}
 
-		//accelDemand = accelerationDemand((10-distApartRadar), fol_vel, 0.5);
-		//				}
-		// Constant velocity
-		//		else{
-		//			accelDemand = -((fol_vel - 25.0));
-		//		}
-
-		//accelerationControl_radar(accelDemand, fol_acc_x);
-
-		/********************* Implementation of ISA *************************************/
-
-		//				if(((fol_vel*dummy) > 0.35 ||(fol_vel*dummy) < -0.3 && vehicleAhead == 0)){
-		//					accelDemand = -(abs(fol_vel) - (0.25/dummy));
-		//					int isa_sensor = 1;
-		//					accelerationControl(accelDemand, fol_acc_x,isa_sensor);
-		//accelerationControl_isa(accelDemand, fol_acc_x);
-		//				}
-
-		/************************* Implementation of acceleration control based on  V2V euclidean distance *************************************/
-
-
 		/******************** Sending via UART ******************************/
-
-
-
-
 		send_float(throttle);
 		send_float(steer);
 		send_float(brake);
-
-
 
 		if(xSemaphoreGive(vehToVehSem) == pdTRUE)
 		{
 			//Go for v-v task
 		}
 
-
-		//	 CANStop=xTaskGetTickCount ();
-		//	CANUtil= CANStop-CANStart;
+	    // Dummy loop to simulate the budget overrun of CC task
 
 		if(ccOverrun == 1 && ccOverrunCount<2){
 			ccOverrunCount++;
-
 			int cc = 0;
 			for(cc=0;cc<4000;cc++){
-
 			}
-
 		}
-
-
 	}
 	vTaskDelete(cruiseControlTaskTcb);
-	//}
 }
 
 /* Task1 */
@@ -819,18 +486,6 @@ void canTask(void *pvParameters)
 	//for periodicity
 	TickType_t xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
-
-	/*	volatile TickType_t CANwaitTime = 0;
-	volatile TickType_t CANstartTime = 0;
-	volatile TickType_t CANstopTime = 0;
-	volatile TickType_t CANexecutionTime [500];
-	 */
-
-	static int i = 0;
-	int laneChangeCount =0;
-	//	stepCount++;
-
-	//prevTime = xTaskGetTickCount ();
 
 	while (1)
 	{
@@ -1123,66 +778,15 @@ void canTask(void *pvParameters)
 									}
 			}
 
-			// 0*8B message for Lane Change Trigger
+			// 0*8B message for Lane Change Trigger (future implementation)
 
 			if(mailBox == canMESSAGE_BOX11  ){
 				while(!canIsRxMessageArrived(canREG1, mailBox));
-
 				canGetData(canREG1, mailBox, rx_data);
-				//laneChangeCount = rx_data[0];
-
-				if(laneChangeCount==0){  // Right Button for Lane Change Trigger
-
-				}
-
-
-				if(laneChangeCount == 246){  // Left Button --> Radar Overrun
-
-
-				}
-
-				if(laneChangeCount ==226){   // UP Button --> CAN Overrun
-
-
-
-				}
-
-				if(laneChangeCount == 236){  // DOWN Button --- Both radar and CAN overrun
-
-
-				}
-
-
 			}
-
-
-			//	CANStop=xTaskGetTickCount ();
-			//	CANUtil= CANStop-CANStart;
-
-			/*
-
-			CANstopTime = xTaskGetTickCount ();
-			CANexecutionTime[i] = CANstopTime - CANstartTime;
-			Budget += CANexecutionTime[i];
-			i++;
-			if (i == 500)
-			{
-				i = 0;
-				BudgetAvg = Budget/1000;
-				Budget = 0;
-			}
-			 */
 		}
-		//1000 is 10 ms. Conversion to x ms = (x/0.01)
-		//TODO: Periodic task works but this does not capture all the incoming data.
-
-	}
-
-	// Simulation of Budget Overrun for CAN task using for loop
-
-
+			}
 }
-
 }
 
 void main(void)
@@ -1198,9 +802,6 @@ void main(void)
 	/* Configuring CAN1: MB1, Msg ID-0x82 to recieve from ABS Gateway; MB2, Msg ID-0x81 to recieve from Suspension/OBD Gateway */
 	canInit();
 
-	//printf("Time %f us\n", time_PMU_code);
-	//taskDISABLE_INTERRUPTS();
-	//_disable_interrupt_();
 	vimDisableInterrupt(16);
 
 	canIntRxSem = xSemaphoreCreateBinary();
@@ -1264,23 +865,6 @@ void main(void)
 		while(1);
 	}
 
-
-
-	//	if (xTaskCreate(blinkLEDTask,"Blink LED Task", configMINIMAL_STACK_SIZE, NULL, 2, &blinkLEDTaskTcb) != pdTRUE)
-	//			{
-	/* Task could not be created */
-	//				while(1);
-	//		}
-
-	//		 if (xTaskCreate(CANPeriodicTxTask,"CANPeriodicTxTask", configMINIMAL_STACK_SIZE , NULL, 3, &CANPeriodicTxTaskTcb) != pdTRUE)
-	//	        {
-	/* Task could not be created */
-	//            while(1);
-	//      }
-
-
-	//taskENABLE_INTERRUPTS();
-	//_enable_interrupt_();
 	vimEnableInterrupt(16, SYS_IRQ);
 
 
@@ -1421,8 +1005,7 @@ float min(float a, float b){
 
 void send_float (float arg)
 {
-	uint8 header[2] = {'(',')'};
-	uint8 terminator[2] = {'\r','\n'};
+
 	// get access to the float as a byte-array:
 	uint8 *data = (uint8*)&arg;
 	uint8 *data3 = (uint8*)&arg+3;
@@ -1430,12 +1013,10 @@ void send_float (float arg)
 	uint8 *data1 = (uint8*)&arg+1;
 
 	// write the data to the serial (little endian since matlab only reads it this way)
-	//sciSend (scilinREG, 2, &header[0]);
 	sciSend (scilinREG, 1, data3);
 	sciSend (scilinREG, 1, data2);
 	sciSend (scilinREG, 1, data1);
 	sciSend (scilinREG, 1, data);
-	//sciSend (scilinREG, 2, &terminator[0]);
 }
 
 /***********************************Speed Control Start***********************************/
@@ -1445,38 +1026,25 @@ int calculateEuclidianDistance(float follower_pos[3], float leader_pos[3])
 {
 	int diff1 = (follower_pos[0]-leader_pos[0])*(follower_pos[0]-leader_pos[0]);
 	int diff2 = (follower_pos[1]-leader_pos[1])*(follower_pos[1]-leader_pos[1]);
-	//	float diff3 = (follower_pos[2]-leader_pos[2])*(follower_pos[2]-leader_pos[2]);
 	int dist = sqrt(diff1+diff2);
-
-
 	return (dist);
-
 }
-
 
 /* Calculate Euclidian Distance between the 2 vehicles */
 float calculateEuclidianDistanceCurve(float xpos1, float xpos2, float ypos1, float ypos2)
 {
 	float diff1 = (xpos1-xpos2)*(xpos1-xpos2);
 	float diff2 = (ypos1-ypos2)*(ypos1-ypos2);
-	//	float diff3 = (follower_pos[2]-leader_pos[2])*(follower_pos[2]-leader_pos[2]);
 	float dist = sqrt(diff1+diff2);
 	return (dist);
 }
 
-
-/*
-float calculate_Euclidean_v2v(curve_1_x[j], curve_1_y[j], curve_1_z[j], curve_1_x[j+1], curve_1_y[j+1], curve_1_z[j+1]){
-	return sqrt(curve_1_x[j]*curve_1_x[j+1] + curve_1_y[j]*curve_1_y[j+1] + curve_1_z[j]*curve_1_z[j+1]);
-}
- */
 
 //Substitute derivative with vel difference btw the 2 vehicles
 //Also means we need to transmit lead vehicle velocity.
 float numericalDerivativeDist(float dist)
 {
 	static float oldDist = 0.0;
-
 	float result = (dist - oldDist)/timeStep;
 	oldDist = dist;
 	return result;
@@ -1490,12 +1058,6 @@ float accelerationDemand(float dist, float follower_velX, float headway)
 	float gain = (headway_vel + dist ) * 0.1;
 	float vel = numericalDerivativeDist(dist);
 	float accelDemand = -(gain + vel);
-	//	accelRecord[i] = vel;
-	//	i++;
-	//	if (i == 50)
-	//	{
-	//		i = 0;
-	//	}
 	return accelDemand;
 }
 
@@ -1508,28 +1070,12 @@ float accelerationDemand2(float dist, float follower_velX, float leader_velX, fl
 	float gain = (headway_dist + dist ) * 0.1;
 	// Fraction of total distance apart plus difference in velocity
 	float accelDemand = -(gain + (follower_velX - leader_velX));
-	//		accelRecord[i] = xTaskGetTickCount ();
-	//		i++;
-	//		if (i == 50)
-	//		{
-	//			i = 0;
-	//		}
 	return accelDemand;
 }
 
 
 void simpleThrottleBrake(float dist, float follower_velX, float leader_velX, float headway)
 {
-
-	//float headway_dist = headway * follower_velX;
-	//float headway_dist = 25.0;
-	//Simple speed control for low budget
-
-
-	// if (dist<headway_dist){
-
-
-
 
 	if (dist<15.0){
 		if(follower_velX > leader_velX)
@@ -1653,22 +1199,6 @@ float laneChangeSteering (float angular_vel, float headingError, float lateralEr
 	float biasIncrement=0.07;
 	int i=0;
 	const TickType_t xDelay = 20 / portTICK_PERIOD_MS;
-	/*for(i =0;i<7;i++){
-		biasStart = biasStart + biasIncrement;
-		gain = gain + biasStart;
-	}*/
-
-
-
-	/*
-	//Need to bound the output for steering
-	if(gain>0.5)
-		return 0.5;
-	else if(gain<(-0.5))
-		return (-0.5);
-	else
-		return gain;*/
-
 
 }
 
@@ -1685,24 +1215,6 @@ float steering (float angular_vel, float headingError, float lateralError)
 
 
 	float gain = 0.5 * (-kpDerivative - kdDerivative -k);
-
-	//if(laneChangeFlag==1){
-	//	gain = gain+ 0.5;  // For giving bias to the car trajectory from its original path.
-	//}
-
-	/*
-		if(laneChangeResolution < 0.42){
-			laneChangeResolution = laneChangeResolution + 0.07;
-			gain = gain + laneChangeResolution;
-		}
-		if(laneChangeResolution > 0.42){
-			laneChangeResolution =0;
-			laneChangeTriggerFlag=2;
-		}*/
-
-
-
-
 
 	//Need to bound the output for steering
 	if(gain>0.5)
