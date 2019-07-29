@@ -1,6 +1,5 @@
 # Testbed
-Autonomous Vehicle Testbed
-For details regarding the setup, please refer to the research paper  https://ieeexplore.ieee.org/document/8759239
+This repository contains the code for an Autonomous Vehicle Testbed. Objective of the setup is to test the performance of different degradation strategies in an Mixed Criticality System.  For details regarding the architecture of the setup, please refer to the research paper  https://ieeexplore.ieee.org/document/8759239
 
 Major components required to run this Setup 
 1. Hercules ECU 
