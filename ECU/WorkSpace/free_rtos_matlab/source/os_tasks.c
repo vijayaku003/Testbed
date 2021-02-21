@@ -2307,14 +2307,14 @@ BaseType_t xTaskIncrementTick( void )
 				overflows.  The guard against negative values is to protect
 				against suspect run time stat counter implementations - which
 				are provided by the application, not the kernel. */
-            if( ulTotalRunTime > ulTaskSwitchedInTime )
+            if(ulTotalRunTime > ulTaskSwitchedInTime )
             {
-                pxCurrentTCB->ulRunTimeCounter += ( ulTotalRunTime - ulTaskSwitchedInTime );
+                pxCurrentTCB->ulRunTimeCounter += (ulTotalRunTime - ulTaskSwitchedInTime);
             }
             else
             { // Overflow has happened
                 //overflowFlag = 1;
-                pxCurrentTCB->ulRunTimeCounter += (4294967295 - ulTaskSwitchedInTime) + ulTotalRunTime;
+                pxCurrentTCB->ulRunTimeCounter += (4294967295 - ulTaskSwitchedInTime) + ulTotalRunTime; // 4294967295 - value of ulRunTimeCounter after which it is observed to overflow
                 mtCOVERAGE_TEST_MARKER();
             }
 

@@ -94,7 +94,6 @@ extern "C" {
 
 /** @enum pmuEvent
 *   @brief pmu event
-*
 *   Alias for pmu event counter increment source
 */
 enum pmuEvent

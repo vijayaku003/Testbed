@@ -806,6 +806,7 @@ V8 if desired. */
 #endif /* configENABLE_BACKWARD_COMPATIBILITY */
 
 static int systemState = 0;
+static int systemMode = 0; // 0 - constant velo mode (vehicle ahead = 0); 1 means constant headway mode (vehicle ahead = 1); 2 means collision avoidance mode.
 
 #ifdef __cplusplus
 }

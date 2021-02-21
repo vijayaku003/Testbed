@@ -13,16 +13,16 @@
 		<item value="false" key="isRegEx"/>
 		<item value="false" key="incremental"/>
 		<item value="false" key="wholeword"/>
-		<item value="Increment" key="selection"/>
+		<item value="ISA" key="selection"/>
 		<list key="findhistory">
-			<item value="increment"/>
-			<item value="canMessageNotification"/>
-			<item value="vTaskPrioritySet"/>
-			<item value="Increment"/>
-			<item value="int"/>
-			<item value="caOverrun"/>
-			<item value="steerOverrun"/>
-			<item value="systemstate"/>
+			<item value="ISA"/>
+			<item value="PID"/>
+			<item value="xNum"/>
+			<item value="radarCurrentExecutionLimit"/>
+			<item value="O"/>
+			<item value="ONOFF"/>
+			<item value="vehicleAhead"/>
+			<item value="calculateEuclidianDistanceCurve"/>
 		</list>
 		<list key="replacehistory">
 			<item value="static int"/>

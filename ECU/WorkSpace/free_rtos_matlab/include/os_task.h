@@ -138,10 +138,9 @@ static uint32_t globalBehaviourTable[configNumberOfTasks+1][configNumberOfTasks+
 static uint32_t globalRuntimeBudgetTable[configNumberOfTasks+1][1] =  {0, 0, 0, 0, 0, 0};
 
 
-
 static int PID = 1;
 static int ONOFF = 0;
-static int ISA = 1;
+static int ISA = 0;
 
 static int maxSCExecutionTime =0;
 static int maxCCExecutionTime =0;

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;free_rtos_matlab/Debug/free_rtos_matlab (3).out&apos; to &apos;free_rtos_matlab.out&apos;" description="Rename resource &apos;free_rtos_matlab (3).out&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="Debug/free_rtos_matlab (3).out" name="free_rtos_matlab.out" stamp="1568180137176" updateReferences="true"/>
+</session>
